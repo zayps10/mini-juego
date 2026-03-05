@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mensaje Secreto</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #1a1410;
+    --card:       #221810;
+    --card2:      #2c1f14;
+    --border:     rgba(200,150,90,0.18);
+    --gold:       #c8965a;
+    --gold-light: #e0b278;
+    --gold-dim:   #7a5530;
+    --cream:      #ede0ce;
+    --warm-grey:  #9e8e7a;
+    --muted:      #5e4e3e;
+    --white:      #f8f2ea;
+    --success:    #7db88a;
+    --error:      #c97a6a;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--cream);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 15% 15%, rgba(200,150,90,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 85% 85%, rgba(180,100,50,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .container { width: 100%; max-width: 420px; position: relative; z-index: 1; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; }
+  .screen.active {
+    display: block;
+    animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 44px 34px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(200,150,90,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 20%; right: 20%; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.6;
+  }
+
+  /* ── TYPOGRAPHY ── */
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+
+  .title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: center;
+    color: var(--white);
+    margin-bottom: 10px;
+  }
+  .title em { color: var(--gold-light); font-style: italic; font-weight: 400; }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--warm-grey);
+    text-align: center;
+    line-height: 1.75;
+    margin-bottom: 32px;
+  }
+
+  /* ── DIVIDERS ── */
+  .divider { height: 1px; background: var(--border); margin: 26px 0; }
+  .ornament { text-align:center; color:var(--gold-dim); letter-spacing:10px; font-size:13px; margin:20px 0; }
+
+  /* ── LOCK / ACCESS ── */
+  .lock-icon {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .lock-circle {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--card2);
+    font-size: 30px;
+    animation: pulse 2.5s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(200,150,90,0.15);
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(200,150,90,0.15); }
+    50%      { box-shadow: 0 0 0 10px rgba(200,150,90,0); }
+  }
+
+  /* PIN DOTS */
+  .pin-display {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin: 28px 0 20px;
+  }
+  .pin-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold-dim);
+    background: transparent;
+    transition: all 0.2s;
+  }
+  .pin-dot.filled {
+    background: var(--gold);
+    border-color: var(--gold);
+    box-shadow: 0 0 10px rgba(200,150,90,0.4);
+  }
+  .pin-dot.error {
+    background: var(--error);
+    border-color: var(--error);
+    animation: shake 0.3s ease;
+  }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-4px)}
+    40%{transform:translateX(4px)}
+    60%{transform:translateX(-4px)}
+    80%{transform:translateX(4px)}
+  }
+
+  /* NUMPAD */
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .num-btn {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 10px;
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    user-select: none;
+  }
+  .num-btn:hover { background: rgba(200,150,90,0.1); border-color: var(--gold-dim); color: var(--white); }
+  .num-btn:active { transform: scale(0.95); }
+  .num-btn.del { font-size: 16px; color: var(--warm-grey); }
+  .num-btn.empty { visibility: hidden; }
+
+  .pin-hint {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    font-style: italic;
+    min-height: 18px;
+    transition: color 0.3s;
+  }
+  .pin-hint.err { color: var(--error); }
+
+  /* ── OPTIONS S2 ── */
+  .options { display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+  .opt {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 15px 20px;
+    color: var(--warm-grey);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .opt:hover { border-color:var(--gold-dim); color:var(--cream); transform:translateX(4px); }
+  .opt.selected { border-color:var(--gold); background:rgba(200,150,90,0.08); color:var(--cream); }
+  .opt-icon { font-size:18px; width:22px; text-align:center; flex-shrink:0; }
+
+  .reaction {
+    font-size:13px; color:var(--warm-grey);
+    font-style:italic; text-align:center;
+    min-height:18px; margin-bottom:18px;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    width:100%; border:none; border-radius:50px;
+    padding:14px 28px;
+    font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500;
+    cursor:pointer; transition:all 0.25s; letter-spacing:0.2px;
+  }
+  .btn-gold { background:var(--gold); color:var(--bg); }
+  .btn-gold:hover { background:var(--gold-light); transform:translateY(-2px); box-shadow:0 8px 24px rgba(200,150,90,0.3); }
+  .btn-gold:disabled { opacity:0.3; cursor:default; transform:none; box-shadow:none; }
+  .btn-ghost { background:transparent; border:1px solid var(--border); color:var(--warm-grey); }
+  .btn-ghost:hover { border-color:var(--gold-dim); color:var(--cream); }
+
+  /* ── EMOJI TILES S3 ── */
+  .tiles-row {
+    display:flex; flex-wrap:wrap;
+    justify-content:center; gap:8px;
+    margin-bottom:22px;
+  }
+  .etile {
+    display:flex; flex-direction:column;
+    align-items:center; gap:5px;
+    padding:10px 8px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    background:var(--card2);
+    min-width:46px;
+    animation:tileIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .etile:nth-child(1){animation-delay:.04s}
+  .etile:nth-child(2){animation-delay:.08s}
+  .etile:nth-child(3){animation-delay:.12s}
+  .etile:nth-child(4){animation-delay:.16s}
+  .etile:nth-child(5){animation-delay:.20s}
+  .etile:nth-child(6){animation-delay:.24s}
+  .etile:nth-child(7){animation-delay:.28s}
+  .etile:nth-child(8){animation-delay:.32s}
+  .etile:nth-child(9){animation-delay:.36s}
+  .etile:nth-child(10){animation-delay:.40s}
+  @keyframes tileIn {
+    from { opacity:0; transform:scale(0.5) translateY(8px); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+  }
+  .etile .tile-emoji { font-size:24px; line-height:1; }
+  .etile .tile-lbl {
+    font-size:9px; letter-spacing:0.5px;
+    color:var(--muted); text-transform:uppercase;
+    min-height:10px; text-align:center;
+  }
+
+  /* ── WORD INPUTS ── */
+  .inputs-wrap {
+    background:var(--card2); border:1px solid var(--border);
+    border-radius:16px; padding:20px; margin-bottom:18px;
+  }
+  .inputs-label {
+    font-size:10px; letter-spacing:3px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:14px;
+  }
+  .words-grid {
+    display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; justify-content:center;
+  }
+  .wslot { display:flex; flex-direction:column; gap:4px; align-items:center; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 8px; min-width:90px; max-width:130px; }
+  .wslot-hint {
+    font-size:22px; text-align:center; line-height:1;
+  }
+  .wslot-letters {
+    font-size:11px;
+    letter-spacing:2px;
+    color:var(--gold);
+    font-weight:600;
+    text-align:center;
+    font-family:'Cormorant Garamond',serif;
+  }
+  .wslot-tip {
+    font-size:10px;
+    color:var(--warm-grey);
+    text-align:center;
+    line-height:1.3;
+    font-style:italic;
+  }
+  .winput {
+    background:var(--bg); border:1px solid var(--border);
+    border-radius:8px; padding:7px 8px;
+    font-family:'DM Sans',sans-serif; font-size:13px;
+    color:var(--cream); outline:none; transition:all 0.2s;
+    width:100%; text-align:center;
+  }
+  .winput:focus { border-color:var(--gold-dim); }
+  .winput.ok  { border-color:var(--success); background:rgba(125,184,138,0.07); color:var(--success); }
+  .winput.bad { border-color:var(--error);   background:rgba(201,122,106,0.07); }
+  .winput:disabled { opacity:0.7; }
+
+  .chint {
+    font-size:12px; color:var(--warm-grey);
+    font-style:italic; text-align:center;
+    min-height:16px; transition:color 0.3s;
+  }
+  .chint.ok  { color:var(--success); }
+  .chint.bad { color:var(--error); }
+
+  /* ── FINAL S4 ── */
+  .msg-full {
+    font-family:'Cormorant Garamond',serif;
+    font-size:26px; font-style:italic;
+    line-height:1.65; color:var(--white);
+    text-align:center; margin:24px 0 6px;
+  }
+  .msg-full .w {
+    display:inline-block;
+    opacity:0; transform:translateY(6px);
+    animation:wr 0.35s ease forwards;
+  }
+  @keyframes wr { to { opacity:1; transform:translateY(0); } }
+
+  .final-note {
+    font-family:'Cormorant Garamond',serif;
+    font-size:17px; font-style:italic;
+    color:var(--warm-grey); line-height:1.9;
+    text-align:center;
+    opacity:0; transition:opacity 1s ease;
+  }
+  .final-note.show { opacity:1; }
+
+  /* ── DOTS ── */
+  .dots { display:flex; justify-content:center; gap:7px; margin-top:28px; }
+  .dot { width:5px;height:5px;border-radius:50%;background:var(--muted);transition:all 0.3s; }
+  .dot.on { background:var(--gold); width:18px; border-radius:3px; }
+
+  /* ── CONFETTI ── */
+  .cfw { position:fixed;inset:0;pointer-events:none;z-index:100;overflow:hidden; }
+  .cp  { position:absolute; animation:cf linear forwards; }
+  @keyframes cf {
+    from { transform:translateY(-10px) rotate(0deg); opacity:1; }
+    to   { transform:translateY(105vh) rotate(500deg); opacity:0; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- S1: CLAVE DE ACCESO -->
+  <div class="screen active" id="s1">
+    <div class="card">
+      <div class="lock-icon"><div class="lock-circle">🔐</div></div>
+      <p class="eyebrow">acceso requerido</p>
+      <h1 class="title">Ingresa la<br><em>clave secreta</em></h1>
+      <p class="subtitle">Solo quien la sabe puede entrar.</p>
+
+      <div class="pin-display">
+        <div class="pin-dot" id="pd0"></div>
+        <div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div>
+        <div class="pin-dot" id="pd3"></div>
+      </div>
+
+      <div class="numpad">
+        <button class="num-btn" onclick="addPin('1')">1</button>
+        <button class="num-btn" onclick="addPin('2')">2</button>
+        <button class="num-btn" onclick="addPin('3')">3</button>
+        <button class="num-btn" onclick="addPin('4')">4</button>
+        <button class="num-btn" onclick="addPin('5')">5</button>
+        <button class="num-btn" onclick="addPin('6')">6</button>
+        <button class="num-btn" onclick="addPin('7')">7</button>
+        <button class="num-btn" onclick="addPin('8')">8</button>
+        <button class="num-btn" onclick="addPin('9')">9</button>
+        <button class="num-btn empty"></button>
+        <button class="num-btn" onclick="addPin('0')">0</button>
+        <button class="num-btn del" onclick="delPin()">&#9003;</button>
+      </div>
+
+      <p class="pin-hint" id="phint">&nbsp;</p>
+
+      <div class="dots">
+        <div class="dot on"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S2: PREGUNTA GRACIOSA -->
+  <div class="screen" id="s2">
+    <div class="card">
+      <p class="eyebrow">antes de empezar</p>
+      <h1 class="title">¿Cuál te dio más<br><em>vergüenza?</em></h1>
+      <p class="subtitle">Solo entre nosotros. Responde con confianza.</p>
+
+      <div class="options">
+        <button class="opt" onclick="pick(this,'casa')">
+          <span class="opt-icon">💨</span>
+          <span>Debajo de tu casa</span>
+        </button>
+        <button class="opt" onclick="pick(this,'parqueo')">
+          <span class="opt-icon">🚗</span>
+          <span>Parqueo de la universidad</span>
+        </button>
+      </div>
+
+      <p class="reaction" id="react">&nbsp;</p>
+
+      <button class="btn btn-gold" id="btnS2" onclick="goTo(3)" disabled>
+        Ver el mensaje secreto
+      </button>
+
+      <div class="dots">
+        <div class="dot"></div><div class="dot on"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S3: DESCIFRAR -->
+  <div class="screen" id="s3">
+    <div class="card">
+      <p class="eyebrow">mensaje cifrado</p>
+      <h1 class="title">Descifra el<br><em>mensaje</em></h1>
+      <p class="subtitle">Cada emoji es una pista. Debajo ves la primera letra y cuántas letras tiene cada palabra.</p>
+
+      <div class="tiles-row">
+        <div class="etile"><span class="tile-emoji">💪</span><span class="tile-lbl" id="tl0"></span></div>
+        <div class="etile"><span class="tile-emoji">🗓️</span><span class="tile-lbl" id="tl1"></span></div>
+        <div class="etile"><span class="tile-emoji">📋</span><span class="tile-lbl" id="tl2"></span></div>
+        <div class="etile"><span class="tile-emoji">📅</span><span class="tile-lbl" id="tl3"></span></div>
+        <div class="etile"><span class="tile-emoji">↩️</span><span class="tile-lbl" id="tl4"></span></div>
+        <div class="etile"><span class="tile-emoji">🪞</span><span class="tile-lbl" id="tl5"></span></div>
+        <div class="etile"><span class="tile-emoji">🎯</span><span class="tile-lbl" id="tl6"></span></div>
+        <div class="etile"><span class="tile-emoji">🫳</span><span class="tile-lbl" id="tl7"></span></div>
+        <div class="etile"><span class="tile-emoji">❓</span><span class="tile-lbl" id="tl8"></span></div>
+        <div class="etile"><span class="tile-emoji">🧔</span><span class="tile-lbl" id="tl9"></span></div>
+        <div class="etile"><span class="tile-emoji">1️⃣</span><span class="tile-lbl" id="tl10"></span></div>
+        <div class="etile"><span class="tile-emoji">🏷️</span><span class="tile-lbl" id="tl11"></span></div>
+        <div class="etile"><span class="tile-emoji">🔗</span><span class="tile-lbl" id="tl12"></span></div>
+        <div class="etile"><span class="tile-emoji">🔍</span><span class="tile-lbl" id="tl13"></span></div>
+        <div class="etile"><span class="tile-emoji">🫵</span><span class="tile-lbl" id="tl14"></span></div>
+        <div class="etile"><span class="tile-emoji">💘</span><span class="tile-lbl" id="tl15"></span></div>
+      </div>
+
+      <div class="inputs-wrap">
+        <p class="inputs-label">Escribe cada palabra — la primera letra ya está dada</p>
+        <div class="words-grid" id="wgrid"></div>
+        <p class="chint" id="chint">Completa todos los campos para verificar</p>
+      </div>
+
+      <button class="btn btn-gold" id="btnCheck" onclick="checkAnswer()" disabled>
+        Verificar respuesta
+      </button>
+
+      <div class="dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot on"></div><div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S4: FINAL -->
+  <div class="screen" id="s4">
+    <div class="card">
+      <p class="eyebrow">mensaje descifrado</p>
+      <h1 class="title">Así es,<br><em>Adita.</em></h1>
+      <div class="ornament">— — —</div>
+
+      <p class="msg-full" id="mfull"></p>
+
+      <div class="divider"></div>
+
+      <p class="final-note" id="fnote">
+        Así adita, espero pacientemente en Dios<br>que nuestros caminos se reúnan.
+      </p>
+
+      <div class="divider"></div>
+      <button class="btn btn-ghost" onclick="restart()">Volver al inicio</button>
+
+      <div class="dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot on"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="cfw" id="cfw"></div>
+
+<script>
+  // ── PIN ──
+  const CORRECT_PIN = '1812';
+  let pin = '';
+
+  function addPin(d) {
+    if (pin.length >= 4) return;
+    pin += d;
+    updateDots();
+    if (pin.length === 4) validatePin();
+  }
+
+  function delPin() {
+    pin = pin.slice(0,-1);
+    updateDots();
+    document.getElementById('phint').textContent = '\u00a0';
+    document.getElementById('phint').className = 'pin-hint';
+  }
+
+  function updateDots() {
+    for (let i=0;i<4;i++) {
+      const d = document.getElementById('pd'+i);
+      d.classList.remove('filled','error');
+      if (i < pin.length) d.classList.add('filled');
+    }
+  }
+
+  function validatePin() {
+    if (pin === CORRECT_PIN) {
+      for (let i=0;i<4;i++) document.getElementById('pd'+i).classList.add('filled');
+      setTimeout(() => goTo(2), 400);
+    } else {
+      for (let i=0;i<4;i++) {
+        const d = document.getElementById('pd'+i);
+        d.classList.remove('filled');
+        d.classList.add('error');
+      }
+      document.getElementById('phint').textContent = 'Clave incorrecta. Intenta de nuevo.';
+      document.getElementById('phint').className = 'pin-hint err';
+      setTimeout(() => {
+        pin = '';
+        updateDots();
+        for (let i=0;i<4;i++) document.getElementById('pd'+i).classList.remove('error');
+      }, 700);
+    }
+  }
+
+  // ── S2 PREGUNTA ──
+  function pick(btn, val) {
+    document.querySelectorAll('.opt').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById('btnS2').disabled = false;
+    const r = { casa:'Eso quedó grabado en la historia...', parqueo:'Ese parqueo guarda demasiados secretos.' };
+    document.getElementById('react').textContent = r[val];
+  }
+
+  // ── NAVIGATION ──
+  function goTo(n) {
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('s'+n).classList.add('active');
+    window.scrollTo({top:0,behavior:'smooth'});
+    if (n===3) buildInputs();
+    if (n===4) buildFinal();
+  }
+
+  // ── S3 INPUTS ──
+  const WORDS  = ['trabajo','todos','los','días','en','mí','para','demostrarte','que','soy','el','Rancel','del','cual','te','enamoraste'];
+  const EMOJIS = ['💪','🗓️','📋','📅','↩️','🪞','🎯','🫳','❓','🧔','1️⃣','🏷️','🔗','🔍','🫵','💘'];
+  const TIPS   = [
+    'Lo que haces con esfuerzo (7 letras)',       // trabajo
+    'La cantidad completa, sin excluir nada',      // todos
+    'Artículo plural masculino (3 letras)',         // los
+    'Plural de "día"',                             // días
+    'Preposición corta (2 letras)',                 // en
+    'Pronombre: yo mismo (2 letras)',               // mí
+    'Preposición de propósito (4 letras)',           // para
+    'Probar con hechos, mostrar algo (11 letras)',  // demostrarte
+    'Conjunción muy corta (3 letras)',              // que
+    'Primera persona singular del verbo ser',       // soy
+    'Artículo masculino singular (2 letras)',        // el
+    'Tu nombre... ¿lo recuerdas? (6 letras)',       // Rancel
+    'Contracción de "de el" (3 letras)',            // del
+    'Pronombre relativo (4 letras)',                // cual
+    'Pronombre de segunda persona (2 letras)',       // te
+    'Pasado de enamorarse (10 letras)'             // enamoraste
+  ];
+
+  // Returns "T _ _ _ _ _ o" — first + last letter shown
+  function makeHint(word) {
+    const clean = word.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if (clean.length === 1) return clean.toUpperCase();
+    if (clean.length === 2) return clean[0].toUpperCase() + ' ' + clean[1];
+    const mid = Array(clean.length - 2).fill('_').join(' ');
+    return clean[0].toUpperCase() + ' ' + mid + ' ' + clean[clean.length-1];
+  }
+
+  function buildInputs() {
+    const grid = document.getElementById('wgrid');
+    grid.innerHTML = '';
+    WORDS.forEach((w,i) => {
+      const s = document.createElement('div');
+      s.className = 'wslot';
+      const hint = makeHint(w);
+      s.innerHTML =
+        '<span class="wslot-hint">'+EMOJIS[i]+'</span>'+
+        '<span class="wslot-letters">'+hint+'</span>'+
+        '<span class="wslot-tip">'+TIPS[i]+'</span>'+
+        '<input class="winput" id="wi'+i+'" placeholder="'+w[0].toUpperCase()+'..." '+
+        'oninput="onWInput()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">';
+      grid.appendChild(s);
+    });
+  }
+
+  function onWInput() {
+    const all = WORDS.every((_,i) => document.getElementById('wi'+i).value.trim().length > 0);
+    document.getElementById('btnCheck').disabled = !all;
+    const hint = document.getElementById('chint');
+    hint.className = 'chint';
+    hint.textContent = all ? 'Listo, verifica tu respuesta' : 'Completa todos los campos para verificar';
+  }
+
+  function normalize(s) {
+    return s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  }
+
+  function checkAnswer() {
+    let correct = 0;
+    WORDS.forEach((w,i) => {
+      const inp = document.getElementById('wi'+i);
+      if (normalize(inp.value) === normalize(w)) {
+        inp.className = 'winput ok'; inp.disabled = true;
+        document.getElementById('tl'+i).textContent = w;
+        correct++;
+      } else {
+        inp.className = 'winput bad';
+        setTimeout(()=>{ inp.className='winput'; inp.disabled=false; }, 600);
+      }
+    });
+
+    const hint = document.getElementById('chint');
+    if (correct === WORDS.length) {
+      hint.textContent = 'Perfecto. Ahora puedes ver el mensaje.';
+      hint.className = 'chint ok';
+      document.getElementById('btnCheck').disabled = true;
+      setTimeout(() => goTo(4), 900);
+    } else {
+      hint.textContent = correct+'/'+WORDS.length+' palabras correctas. Corrige las rojas.';
+      hint.className = 'chint bad';
+      document.getElementById('btnCheck').disabled = false;
+    }
+  }
+
+  // ── S4 FINAL ──
+  function buildFinal() {
+    const words = ['trabajo','todos','los','días','en','mí','para','demostrarte','que','soy','el','Rancel','del','cual','te','enamoraste.'];
+    const box = document.getElementById('mfull');
+    box.innerHTML = '';
+    words.forEach((w,i) => {
+      const s = document.createElement('span');
+      s.className = 'w';
+      s.textContent = w+' ';
+      s.style.animationDelay = (i*0.14)+'s';
+      box.appendChild(s);
+    });
+    setTimeout(() => {
+      document.getElementById('fnote').classList.add('show');
+      confetti();
+    }, words.length*140 + 600);
+  }
+
+  function confetti() {
+    const colors = ['#c8965a','#e0b278','#7a5530','#ede0ce','#7db88a','#2c1f14'];
+    const wrap = document.getElementById('cfw');
+    for (let i=0;i<70;i++) {
+      const p = document.createElement('div');
+      p.className = 'cp';
+      const sz = 4+Math.random()*9;
+      p.style.cssText =
+        'left:'+Math.random()*100+'%;top:'+(-5-Math.random()*8)+'%;'+
+        'width:'+sz+'px;height:'+(sz*(Math.random()>.5?1:2.2))+'px;'+
+        'background:'+colors[Math.floor(Math.random()*colors.length)]+';'+
+        'border-radius:'+(Math.random()>.5?'50%':'2px')+';'+
+        'animation-duration:'+(1.8+Math.random()*2.2)+'s;'+
+        'animation-delay:'+(Math.random()*.7)+'s;';
+      wrap.appendChild(p);
+      setTimeout(()=>p.remove(),5000);
+    }
+  }
+
+  // ── RESTART ──
+  function restart() {
+    pin = '';
+    updateDots();
+    document.getElementById('phint').textContent = '\u00a0';
+    document.getElementById('phint').className = 'pin-hint';
+    document.querySelectorAll('.opt').forEach(b=>b.classList.remove('selected'));
+    document.getElementById('btnS2').disabled = true;
+    document.getElementById('react').innerHTML = '&nbsp;';
+    document.getElementById('fnote').classList.remove('show');
+    goTo(1);
+  }
+</script>
+</body>
+</html>
